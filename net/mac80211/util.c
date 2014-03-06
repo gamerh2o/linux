@@ -1859,7 +1859,7 @@ void ieee80211_recalc_smps(struct ieee80211_sub_if_data *sdata)
 		goto unlock;
 
 	chanctx = container_of(chanctx_conf, struct ieee80211_chanctx, conf);
-	ieee80211_recalc_smps_chanctx(local, chanctx);
+	ieee80211_recalc_chanctx_smps(local, chanctx);
  unlock:
 	mutex_unlock(&local->chanctx_mtx);
 }

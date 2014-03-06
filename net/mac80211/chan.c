@@ -222,7 +222,7 @@ static bool ieee80211_is_radar_required(struct ieee80211_local *local)
 	return false;
 }
 
-static void ieee80211_recalc_radar_chanctx(struct ieee80211_local *local,
+static void ieee80211_recalc_chanctx_radar(struct ieee80211_local *local,
 					   struct ieee80211_chanctx *chanctx)
 {
 	bool radar_enabled;
@@ -247,7 +247,7 @@ static void ieee80211_recalc_radar_chanctx(struct ieee80211_local *local,
 	drv_change_chanctx(local, chanctx, IEEE80211_CHANCTX_CHANGE_RADAR);
 }
 
-void ieee80211_recalc_smps_chanctx(struct ieee80211_local *local,
+void ieee80211_recalc_chanctx_smps(struct ieee80211_local *local,
 				   struct ieee80211_chanctx *chanctx)
 {
 	struct ieee80211_sub_if_data *sdata;
@@ -328,6 +328,15 @@ void ieee80211_recalc_smps_chanctx(struct ieee80211_local *local,
 	chanctx->conf.rx_chains_static = rx_chains_static;
 	chanctx->conf.rx_chains_dynamic = rx_chains_dynamic;
 	drv_change_chanctx(local, chanctx, IEEE80211_CHANCTX_CHANGE_RX_CHAINS);
+}
+
+static void ieee80211_recalc_chanctx(struct ieee80211_local *local,
+				     struct ieee80211_chanctx *ctx)
+{
+	ieee80211_recalc_chanctx_chantype(local, ctx);
+	ieee80211_recalc_chanctx_smps(local, ctx);
+	ieee80211_recalc_chanctx_radar(local, ctx);
+	ieee80211_recalc_chanctx_min_def(local, ctx);
 }
 
 static struct ieee80211_chanctx *
@@ -488,12 +497,8 @@ static void ieee80211_unassign_vif_chanctx(struct ieee80211_sub_if_data *sdata,
 
 	drv_unassign_vif_chanctx(local, sdata, ctx);
 
-	if (ctx->refcount > 0) {
-		ieee80211_recalc_chanctx_chantype(sdata->local, ctx);
-		ieee80211_recalc_smps_chanctx(local, ctx);
-		ieee80211_recalc_radar_chanctx(local, ctx);
-		ieee80211_recalc_chanctx_min_def(local, ctx);
-	}
+	if (ctx->refcount > 0)
+		ieee80211_recalc_chanctx(local, ctx);
 }
 
 static void __ieee80211_vif_release_channel(struct ieee80211_sub_if_data *sdata)
@@ -549,8 +554,8 @@ int ieee80211_vif_use_channel(struct ieee80211_sub_if_data *sdata,
 		goto out;
 	}
 
-	ieee80211_recalc_smps_chanctx(local, ctx);
-	ieee80211_recalc_radar_chanctx(local, ctx);
+	ieee80211_recalc_chanctx_smps(local, ctx);
+	ieee80211_recalc_chanctx_radar(local, ctx);
  out:
 	mutex_unlock(&local->chanctx_mtx);
 	return ret;
@@ -601,10 +606,7 @@ int ieee80211_vif_change_channel(struct ieee80211_sub_if_data *sdata,
 	chanctx_changed |= IEEE80211_CHANCTX_CHANGE_CHANNEL;
 	drv_change_chanctx(local, ctx, chanctx_changed);
 
-	ieee80211_recalc_chanctx_chantype(local, ctx);
-	ieee80211_recalc_smps_chanctx(local, ctx);
-	ieee80211_recalc_radar_chanctx(local, ctx);
-	ieee80211_recalc_chanctx_min_def(local, ctx);
+	ieee80211_recalc_chanctx(local, ctx);
 
 	ret = 0;
  out:
