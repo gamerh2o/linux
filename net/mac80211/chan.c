@@ -143,9 +143,10 @@ void ieee80211_recalc_chanctx_min_def(struct ieee80211_local *local,
 	drv_change_chanctx(local, ctx, IEEE80211_CHANCTX_CHANGE_MIN_WIDTH);
 }
 
-static void ieee80211_change_chanctx(struct ieee80211_local *local,
-				     struct ieee80211_chanctx *ctx,
-				     const struct cfg80211_chan_def *chandef)
+static void
+ieee80211_recalc_chanctx_def(struct ieee80211_local *local,
+			     struct ieee80211_chanctx *ctx,
+			     const struct cfg80211_chan_def *chandef)
 {
 	if (cfg80211_chandef_identical(&ctx->conf.def, chandef))
 		return;
@@ -154,12 +155,20 @@ static void ieee80211_change_chanctx(struct ieee80211_local *local,
 
 	ctx->conf.def = *chandef;
 	drv_change_chanctx(local, ctx, IEEE80211_CHANCTX_CHANGE_WIDTH);
-	ieee80211_recalc_chanctx_min_def(local, ctx);
 
 	if (!local->use_chanctx) {
 		local->_oper_chandef = *chandef;
 		ieee80211_hw_config(local, 0);
 	}
+}
+
+static void
+_ieee80211_recalc_chanctx_chantype(struct ieee80211_local *local,
+				   struct ieee80211_chanctx *ctx,
+				   const struct cfg80211_chan_def *chandef)
+{
+	ieee80211_recalc_chanctx_def(local, ctx, chandef);
+	ieee80211_recalc_chanctx_min_def(local, ctx);
 }
 
 static struct ieee80211_chanctx *
@@ -184,7 +193,7 @@ ieee80211_find_chanctx(struct ieee80211_local *local,
 		if (!compat)
 			continue;
 
-		ieee80211_change_chanctx(local, ctx, compat);
+		_ieee80211_recalc_chanctx_chantype(local, ctx, compat);
 
 		return ctx;
 	}
@@ -350,7 +359,7 @@ static void ieee80211_recalc_chanctx_chantype(struct ieee80211_local *local,
 	if (WARN_ON_ONCE(!compat))
 		return;
 
-	ieee80211_change_chanctx(local, ctx, compat);
+	_ieee80211_recalc_chanctx_chantype(local, ctx, compat);
 }
 
 static void ieee80211_recalc_radar_chanctx(struct ieee80211_local *local,
