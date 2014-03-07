@@ -171,6 +171,39 @@ _ieee80211_recalc_chanctx_chantype(struct ieee80211_local *local,
 	ieee80211_recalc_chanctx_min_def(local, ctx);
 }
 
+static void ieee80211_recalc_chanctx_chantype(struct ieee80211_local *local,
+					      struct ieee80211_chanctx *ctx)
+{
+	struct ieee80211_chanctx_conf *conf = &ctx->conf;
+	struct ieee80211_sub_if_data *sdata;
+	const struct cfg80211_chan_def *compat = NULL;
+
+	lockdep_assert_held(&local->chanctx_mtx);
+
+	rcu_read_lock();
+	list_for_each_entry_rcu(sdata, &local->interfaces, list) {
+
+		if (!ieee80211_sdata_running(sdata))
+			continue;
+		if (rcu_access_pointer(sdata->vif.chanctx_conf) != conf)
+			continue;
+
+		if (!compat)
+			compat = &sdata->vif.bss_conf.chandef;
+
+		compat = cfg80211_chandef_compatible(
+				&sdata->vif.bss_conf.chandef, compat);
+		if (!compat)
+			break;
+	}
+	rcu_read_unlock();
+
+	if (WARN_ON_ONCE(!compat))
+		return;
+
+	_ieee80211_recalc_chanctx_chantype(local, ctx, compat);
+}
+
 static struct ieee80211_chanctx *
 ieee80211_find_chanctx(struct ieee80211_local *local,
 		       const struct cfg80211_chan_def *chandef,
@@ -327,39 +360,6 @@ static int ieee80211_assign_vif_chanctx(struct ieee80211_sub_if_data *sdata,
 		ieee80211_bss_info_change_notify(sdata, BSS_CHANGED_IDLE);
 
 	return 0;
-}
-
-static void ieee80211_recalc_chanctx_chantype(struct ieee80211_local *local,
-					      struct ieee80211_chanctx *ctx)
-{
-	struct ieee80211_chanctx_conf *conf = &ctx->conf;
-	struct ieee80211_sub_if_data *sdata;
-	const struct cfg80211_chan_def *compat = NULL;
-
-	lockdep_assert_held(&local->chanctx_mtx);
-
-	rcu_read_lock();
-	list_for_each_entry_rcu(sdata, &local->interfaces, list) {
-
-		if (!ieee80211_sdata_running(sdata))
-			continue;
-		if (rcu_access_pointer(sdata->vif.chanctx_conf) != conf)
-			continue;
-
-		if (!compat)
-			compat = &sdata->vif.bss_conf.chandef;
-
-		compat = cfg80211_chandef_compatible(
-				&sdata->vif.bss_conf.chandef, compat);
-		if (!compat)
-			break;
-	}
-	rcu_read_unlock();
-
-	if (WARN_ON_ONCE(!compat))
-		return;
-
-	_ieee80211_recalc_chanctx_chantype(local, ctx, compat);
 }
 
 static void ieee80211_recalc_radar_chanctx(struct ieee80211_local *local,
