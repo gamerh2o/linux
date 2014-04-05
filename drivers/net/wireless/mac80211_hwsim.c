@@ -2685,28 +2685,20 @@ static int __init init_mac80211_hwsim(void)
 		goto out_free_radios;
 	}
 
-	rtnl_lock();
-	err = dev_alloc_name(hwsim_mon, hwsim_mon->name);
+	err = register_netdev(hwsim_mon);
 	if (err < 0) {
-		rtnl_unlock();
+		free_netdev(hwsim_mon);
 		goto out_free_radios;
 	}
 
-	err = register_netdevice(hwsim_mon);
-	if (err < 0) {
-		rtnl_unlock();
-		goto out_free_mon;
-	}
-	rtnl_unlock();
-
 	err = hwsim_init_netlink();
-	if (err < 0)
-		goto out_free_mon;
+	if (err < 0) {
+		unregister_netdev(hwsim_mon);
+		goto out_free_radios;
+	}
 
 	return 0;
 
-out_free_mon:
-	free_netdev(hwsim_mon);
 out_free_radios:
 	mac80211_hwsim_free();
 out_unregister_driver:
