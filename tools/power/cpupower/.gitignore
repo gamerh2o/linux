@@ -20,7 +20,6 @@ utils/cpufreq-set.o
 utils/cpufreq-aperf.o
 cpupower
 bench/cpufreq-bench
-debug/kernel/Module.symvers
 debug/i386/centrino-decode
 debug/i386/dump_psb
 debug/i386/intel_gsic
