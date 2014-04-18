@@ -2336,42 +2336,47 @@ static int hwsim_cloned_frame_received_nl(struct sk_buff *skb_2,
 	struct mac80211_hwsim_data *data2;
 	struct ieee80211_rx_status rx_status;
 	const u8 *dst;
-	int frame_data_len;
+	int frame_data_len, err;
 	void *frame_data;
-	struct sk_buff *skb = NULL;
+	struct sk_buff *skb;
 
-	if (info->snd_portid != wmediumd_portid)
-		return -EINVAL;
+	if (info->snd_portid != wmediumd_portid) {
+		err = -EINVAL;
+		goto out;
+	}
 
 	if (!info->attrs[HWSIM_ATTR_ADDR_RECEIVER] ||
 	    !info->attrs[HWSIM_ATTR_FRAME] ||
 	    !info->attrs[HWSIM_ATTR_RX_RATE] ||
-	    !info->attrs[HWSIM_ATTR_SIGNAL])
+	    !info->attrs[HWSIM_ATTR_SIGNAL]) {
+		err = -EINVAL;
 		goto out;
+	}
 
-	dst = (void *)nla_data(info->attrs[HWSIM_ATTR_ADDR_RECEIVER]);
+	dst = nla_data(info->attrs[HWSIM_ATTR_ADDR_RECEIVER]);
+	data2 = get_hwsim_data_ref_from_addr(dst);
+	if (!data2 || data2->idle || !data2->started) {
+		err = -EINVAL;
+		goto out;
+	}
+
 	frame_data_len = nla_len(info->attrs[HWSIM_ATTR_FRAME]);
-	frame_data = (void *)nla_data(info->attrs[HWSIM_ATTR_FRAME]);
+	if (frame_data_len > IEEE80211_MAX_DATA_LEN) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	frame_data = nla_data(info->attrs[HWSIM_ATTR_FRAME]);
 
 	/* Allocate new skb here */
 	skb = alloc_skb(frame_data_len, GFP_KERNEL);
-	if (skb == NULL)
-		goto err;
-
-	if (frame_data_len > IEEE80211_MAX_DATA_LEN)
-		goto err;
+	if (skb == NULL) {
+		err = -ENOMEM;
+		goto out;
+	}
 
 	/* Copy the data */
 	memcpy(skb_put(skb, frame_data_len), frame_data, frame_data_len);
-
-	data2 = get_hwsim_data_ref_from_addr(dst);
-	if (!data2)
-		goto out;
-
-	/* check if radio is configured properly */
-
-	if (data2->idle || !data2->started)
-		goto out;
 
 	/* A frame is received from user space */
 	memset(&rx_status, 0, sizeof(rx_status));
@@ -2384,12 +2389,10 @@ static int hwsim_cloned_frame_received_nl(struct sk_buff *skb_2,
 	ieee80211_rx_irqsafe(data2->hw, skb);
 
 	return 0;
-err:
-	printk(KERN_DEBUG "mac80211_hwsim: error occurred in %s\n", __func__);
-	goto out;
+
 out:
-	dev_kfree_skb(skb);
-	return -EINVAL;
+	pr_debug("mac80211_hwsim: error occurred in %s\n", __func__);
+	return err;
 }
 
 static int hwsim_register_received_nl(struct sk_buff *skb_2,
