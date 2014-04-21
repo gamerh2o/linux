@@ -5787,15 +5787,15 @@ static int nl80211_start_radar_detection(struct sk_buff *skb,
 	struct cfg80211_chan_def chandef;
 	enum nl80211_dfs_regions dfs_region;
 	unsigned int cac_time_ms;
-	int err;
+	int ret;
 
 	dfs_region = reg_get_dfs_region(wdev->wiphy);
 	if (dfs_region == NL80211_DFS_UNSET)
 		return -EINVAL;
 
-	err = nl80211_parse_chandef(rdev, info, &chandef);
-	if (err)
-		return err;
+	ret = nl80211_parse_chandef(rdev, info, &chandef);
+	if (ret)
+		return ret;
 
 	if (netif_carrier_ok(dev))
 		return -EBUSY;
@@ -5803,12 +5803,12 @@ static int nl80211_start_radar_detection(struct sk_buff *skb,
 	if (wdev->cac_started)
 		return -EBUSY;
 
-	err = cfg80211_chandef_dfs_check(wdev->wiphy, &chandef,
+	ret = cfg80211_chandef_dfs_check(wdev->wiphy, &chandef,
 					 NL80211_IFTYPE_UNSPECIFIED);
-	if (err < 0)
-		return err;
+	if (ret < 0)
+		return ret;
 
-	if (err == 0)
+	if (ret == 0)
 		return -EINVAL;
 
 	if (!cfg80211_chandef_dfs_usable(wdev->wiphy, &chandef))
@@ -5821,15 +5821,15 @@ static int nl80211_start_radar_detection(struct sk_buff *skb,
 	if (WARN_ON(!cac_time_ms))
 		cac_time_ms = IEEE80211_DFS_MIN_CAC_TIME_MS;
 
-	err = rdev->ops->start_radar_detection(&rdev->wiphy, dev, &chandef,
+	ret = rdev->ops->start_radar_detection(&rdev->wiphy, dev, &chandef,
 					       cac_time_ms);
-	if (!err) {
+	if (!ret) {
 		wdev->chandef = chandef;
 		wdev->cac_started = true;
 		wdev->cac_start_time = jiffies;
 		wdev->cac_time_ms = cac_time_ms;
 	}
-	return err;
+	return ret;
 }
 
 static int nl80211_channel_switch(struct sk_buff *skb, struct genl_info *info)
@@ -5843,7 +5843,7 @@ static int nl80211_channel_switch(struct sk_buff *skb, struct genl_info *info)
 	 */
 	static struct nlattr *csa_attrs[NL80211_ATTR_MAX+1];
 	u8 radar_detect_width = 0;
-	int err;
+	int ret;
 	bool need_new_beacon = false;
 
 	if (!rdev->ops->channel_switch ||
@@ -5886,19 +5886,19 @@ static int nl80211_channel_switch(struct sk_buff *skb, struct genl_info *info)
 	if (!need_new_beacon)
 		goto skip_beacons;
 
-	err = nl80211_parse_beacon(info->attrs, &params.beacon_after);
-	if (err)
-		return err;
+	ret = nl80211_parse_beacon(info->attrs, &params.beacon_after);
+	if (ret)
+		return ret;
 
-	err = nla_parse_nested(csa_attrs, NL80211_ATTR_MAX,
+	ret = nla_parse_nested(csa_attrs, NL80211_ATTR_MAX,
 			       info->attrs[NL80211_ATTR_CSA_IES],
 			       nl80211_policy);
-	if (err)
-		return err;
+	if (ret)
+		return ret;
 
-	err = nl80211_parse_beacon(csa_attrs, &params.beacon_csa);
-	if (err)
-		return err;
+	ret = nl80211_parse_beacon(csa_attrs, &params.beacon_csa);
+	if (ret)
+		return ret;
 
 	if (!csa_attrs[NL80211_ATTR_CSA_C_OFF_BEACON])
 		return -EINVAL;
@@ -5926,21 +5926,21 @@ static int nl80211_channel_switch(struct sk_buff *skb, struct genl_info *info)
 	}
 
 skip_beacons:
-	err = nl80211_parse_chandef(rdev, info, &params.chandef);
-	if (err)
-		return err;
+	ret = nl80211_parse_chandef(rdev, info, &params.chandef);
+	if (ret)
+		return ret;
 
 	if (!cfg80211_reg_can_beacon(&rdev->wiphy, &params.chandef,
 				     wdev->iftype))
 		return -EINVAL;
 
-	err = cfg80211_chandef_dfs_check(wdev->wiphy,
+	ret = cfg80211_chandef_dfs_check(wdev->wiphy,
 					 &params.chandef,
 					 wdev->iftype);
-	if (err < 0)
-		return err;
+	if (ret < 0)
+		return ret;
 
-	if (err > 0) {
+	if (ret > 0) {
 		radar_detect_width = BIT(params.chandef.width);
 		params.radar_required = true;
 	}
@@ -5949,21 +5949,21 @@ skip_beacons:
 	 * verification is a bit more complicated, because we only do
 	 * it later when the channel switch really happens.
 	 */
-	err = cfg80211_can_use_iftype_chan(rdev, wdev, wdev->iftype,
+	ret = cfg80211_can_use_iftype_chan(rdev, wdev, wdev->iftype,
 					   params.chandef.chan,
 					   CHAN_MODE_SHARED,
 					   radar_detect_width);
-	if (err)
-		return err;
+	if (ret)
+		return ret;
 
 	if (info->attrs[NL80211_ATTR_CH_SWITCH_BLOCK_TX])
 		params.block_tx = true;
 
 	wdev_lock(wdev);
-	err = rdev_channel_switch(rdev, dev, &params);
+	ret = rdev_channel_switch(rdev, dev, &params);
 	wdev_unlock(wdev);
 
-	return err;
+	return ret;
 }
 
 static int nl80211_send_bss(struct sk_buff *msg, struct netlink_callback *cb,

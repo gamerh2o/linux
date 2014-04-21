@@ -856,7 +856,7 @@ ieee80211_mesh_process_chnswitch(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_csa_ie csa_ie;
 	struct ieee80211_if_mesh *ifmsh = &sdata->u.mesh;
 	enum ieee80211_band band = ieee80211_get_sdata_band(sdata);
-	int err;
+	int ret;
 	u32 sta_flags;
 
 	sdata_assert_lock(sdata);
@@ -874,12 +874,12 @@ ieee80211_mesh_process_chnswitch(struct ieee80211_sub_if_data *sdata,
 
 	memset(&params, 0, sizeof(params));
 	memset(&csa_ie, 0, sizeof(csa_ie));
-	err = ieee80211_parse_ch_switch_ie(sdata, elems, beacon, band,
+	ret = ieee80211_parse_ch_switch_ie(sdata, elems, beacon, band,
 					   sta_flags, sdata->vif.addr,
 					   &csa_ie);
-	if (err < 0)
+	if (ret < 0)
 		return false;
-	if (err)
+	if (ret)
 		return false;
 
 	params.chandef = csa_ie.chandef;
@@ -897,16 +897,16 @@ ieee80211_mesh_process_chnswitch(struct ieee80211_sub_if_data *sdata,
 		return false;
 	}
 
-	err = cfg80211_chandef_dfs_check(sdata->local->hw.wiphy,
+	ret = cfg80211_chandef_dfs_check(sdata->local->hw.wiphy,
 					 &params.chandef,
 					 NL80211_IFTYPE_MESH_POINT);
-	if (err < 0)
+	if (ret < 0)
 		return false;
-	if (err > 0)
+	if (ret > 0)
 		/* TODO: DFS not (yet) supported */
 		return false;
 
-	params.radar_required = err;
+	params.radar_required = ret;
 
 	if (cfg80211_chandef_identical(&params.chandef,
 				       &sdata->vif.bss_conf.chandef)) {

@@ -229,7 +229,7 @@ static void __ieee80211_sta_join_ibss(struct ieee80211_sub_if_data *sdata,
 	enum nl80211_bss_scan_width scan_width;
 	bool have_higher_than_11mbit;
 	bool radar_required;
-	int err;
+	int ret;
 
 	sdata_assert_lock(sdata);
 
@@ -283,20 +283,20 @@ static void __ieee80211_sta_join_ibss(struct ieee80211_sub_if_data *sdata,
 		}
 	}
 
-	err = cfg80211_chandef_dfs_check(sdata->local->hw.wiphy,
+	ret = cfg80211_chandef_dfs_check(sdata->local->hw.wiphy,
 					 &chandef, NL80211_IFTYPE_ADHOC);
-	if (err < 0) {
+	if (ret < 0) {
 		sdata_info(sdata,
 			   "Failed to join IBSS, invalid chandef\n");
 		return;
 	}
-	if (err > 0 && !ifibss->userspace_handles_dfs) {
+	if (ret > 0 && !ifibss->userspace_handles_dfs) {
 		sdata_info(sdata,
 			   "Failed to join IBSS, DFS channel without control program\n");
 		return;
 	}
 
-	radar_required = err;
+	radar_required = ret;
 
 	mutex_lock(&local->mtx);
 	if (ieee80211_vif_use_channel(sdata, &chandef,
@@ -360,8 +360,8 @@ static void __ieee80211_sta_join_ibss(struct ieee80211_sub_if_data *sdata,
 	sdata->vif.bss_conf.ibss_joined = true;
 	sdata->vif.bss_conf.ibss_creator = creator;
 
-	err = drv_join_ibss(local, sdata);
-	if (err) {
+	ret = drv_join_ibss(local, sdata);
+	if (ret) {
 		sdata->vif.bss_conf.ibss_joined = false;
 		sdata->vif.bss_conf.ibss_creator = false;
 		sdata->vif.bss_conf.enable_beacon = false;
@@ -372,7 +372,7 @@ static void __ieee80211_sta_join_ibss(struct ieee80211_sub_if_data *sdata,
 		ieee80211_vif_release_channel(sdata);
 		mutex_unlock(&local->mtx);
 		sdata_info(sdata, "Failed to join IBSS, driver failure: %d\n",
-			   err);
+			   ret);
 		return;
 	}
 
@@ -770,15 +770,15 @@ static void ieee80211_csa_connection_drop_work(struct work_struct *work)
 static void ieee80211_ibss_csa_mark_radar(struct ieee80211_sub_if_data *sdata)
 {
 	struct ieee80211_if_ibss *ifibss = &sdata->u.ibss;
-	int err;
+	int ret;
 
 	/* if the current channel is a DFS channel, mark the channel as
 	 * unavailable.
 	 */
-	err = cfg80211_chandef_dfs_check(sdata->local->hw.wiphy,
+	ret = cfg80211_chandef_dfs_check(sdata->local->hw.wiphy,
 					 &ifibss->chandef,
 					 NL80211_IFTYPE_ADHOC);
-	if (err > 0)
+	if (ret > 0)
 		cfg80211_radar_event(sdata->local->hw.wiphy, &ifibss->chandef,
 				     GFP_ATOMIC);
 }
@@ -792,7 +792,7 @@ ieee80211_ibss_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_csa_ie csa_ie;
 	struct ieee80211_if_ibss *ifibss = &sdata->u.ibss;
 	enum nl80211_channel_type ch_type;
-	int err;
+	int ret;
 	u32 sta_flags;
 
 	sdata_assert_lock(sdata);
@@ -813,15 +813,15 @@ ieee80211_ibss_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 
 	memset(&params, 0, sizeof(params));
 	memset(&csa_ie, 0, sizeof(csa_ie));
-	err = ieee80211_parse_ch_switch_ie(sdata, elems, beacon,
+	ret = ieee80211_parse_ch_switch_ie(sdata, elems, beacon,
 					   ifibss->chandef.chan->band,
 					   sta_flags, ifibss->bssid, &csa_ie);
 	/* can't switch to destination channel, fail */
-	if (err < 0)
+	if (ret < 0)
 		goto disconnect;
 
 	/* did not contain a CSA */
-	if (err)
+	if (ret)
 		return false;
 
 	/* channel switch is not supported, disconnect */
@@ -875,17 +875,17 @@ ieee80211_ibss_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 		goto disconnect;
 	}
 
-	err = cfg80211_chandef_dfs_check(sdata->local->hw.wiphy,
+	ret = cfg80211_chandef_dfs_check(sdata->local->hw.wiphy,
 					 &params.chandef,
 					 NL80211_IFTYPE_ADHOC);
-	if (err < 0)
+	if (ret < 0)
 		goto disconnect;
-	if (err > 0 && !ifibss->userspace_handles_dfs) {
+	if (ret > 0 && !ifibss->userspace_handles_dfs) {
 		/* IBSS-DFS only allowed with a control program */
 		goto disconnect;
 	}
 
-	params.radar_required = err;
+	params.radar_required = ret;
 
 	if (cfg80211_chandef_identical(&params.chandef,
 				       &sdata->vif.bss_conf.chandef)) {
