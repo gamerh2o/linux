@@ -2210,7 +2210,7 @@ TRACE_EVENT(cfg80211_reg_can_beacon,
 		  WIPHY_PR_ARG, CHAN_DEF_PR_ARG, __entry->iftype)
 );
 
-TRACE_EVENT(cfg80211_chandef_dfs_required,
+TRACE_EVENT(cfg80211_chandef_dfs_check,
 	TP_PROTO(struct wiphy *wiphy, struct cfg80211_chan_def *chandef),
 	TP_ARGS(wiphy, chandef),
 	TP_STRUCT__entry(

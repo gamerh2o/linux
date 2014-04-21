@@ -283,8 +283,8 @@ static void __ieee80211_sta_join_ibss(struct ieee80211_sub_if_data *sdata,
 		}
 	}
 
-	err = cfg80211_chandef_dfs_required(sdata->local->hw.wiphy,
-					    &chandef, NL80211_IFTYPE_ADHOC);
+	err = cfg80211_chandef_dfs_check(sdata->local->hw.wiphy,
+					 &chandef, NL80211_IFTYPE_ADHOC);
 	if (err < 0) {
 		sdata_info(sdata,
 			   "Failed to join IBSS, invalid chandef\n");
@@ -775,9 +775,9 @@ static void ieee80211_ibss_csa_mark_radar(struct ieee80211_sub_if_data *sdata)
 	/* if the current channel is a DFS channel, mark the channel as
 	 * unavailable.
 	 */
-	err = cfg80211_chandef_dfs_required(sdata->local->hw.wiphy,
-					    &ifibss->chandef,
-					    NL80211_IFTYPE_ADHOC);
+	err = cfg80211_chandef_dfs_check(sdata->local->hw.wiphy,
+					 &ifibss->chandef,
+					 NL80211_IFTYPE_ADHOC);
 	if (err > 0)
 		cfg80211_radar_event(sdata->local->hw.wiphy, &ifibss->chandef,
 				     GFP_ATOMIC);
@@ -875,9 +875,9 @@ ieee80211_ibss_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 		goto disconnect;
 	}
 
-	err = cfg80211_chandef_dfs_required(sdata->local->hw.wiphy,
-					    &params.chandef,
-					    NL80211_IFTYPE_ADHOC);
+	err = cfg80211_chandef_dfs_check(sdata->local->hw.wiphy,
+					 &params.chandef,
+					 NL80211_IFTYPE_ADHOC);
 	if (err < 0)
 		goto disconnect;
 	if (err > 0 && !ifibss->userspace_handles_dfs) {
@@ -1645,9 +1645,9 @@ int ieee80211_ibss_join(struct ieee80211_sub_if_data *sdata,
 	int i;
 	int ret;
 
-	ret = cfg80211_chandef_dfs_required(local->hw.wiphy,
-					    &params->chandef,
-					    sdata->wdev.iftype);
+	ret = cfg80211_chandef_dfs_check(local->hw.wiphy,
+					 &params->chandef,
+					 sdata->wdev.iftype);
 	if (ret < 0)
 		return ret;
 

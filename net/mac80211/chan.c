@@ -738,9 +738,9 @@ int ieee80211_vif_use_channel(struct ieee80211_sub_if_data *sdata,
 
 	mutex_lock(&local->chanctx_mtx);
 
-	ret = cfg80211_chandef_dfs_required(local->hw.wiphy,
-					    chandef,
-					    sdata->wdev.iftype);
+	ret = cfg80211_chandef_dfs_check(local->hw.wiphy,
+					 chandef,
+					 sdata->wdev.iftype);
 	if (ret < 0)
 		goto out;
 	if (ret > 0)

@@ -897,9 +897,9 @@ ieee80211_mesh_process_chnswitch(struct ieee80211_sub_if_data *sdata,
 		return false;
 	}
 
-	err = cfg80211_chandef_dfs_required(sdata->local->hw.wiphy,
-					    &params.chandef,
-					    NL80211_IFTYPE_MESH_POINT);
+	err = cfg80211_chandef_dfs_check(sdata->local->hw.wiphy,
+					 &params.chandef,
+					 NL80211_IFTYPE_MESH_POINT);
 	if (err < 0)
 		return false;
 	if (err > 0)

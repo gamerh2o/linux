@@ -449,16 +449,16 @@ bool cfg80211_chandef_usable(struct wiphy *wiphy,
 			     u32 prohibited_flags);
 
 /**
- * cfg80211_chandef_dfs_required - checks if radar detection is required
+ * cfg80211_chandef_dfs_check - checks if radar detection is required
  * @wiphy: the wiphy to validate against
  * @chandef: the channel definition to check
  * @iftype: the interface type as specified in &enum nl80211_iftype
  * Returns:
  *	1 if radar detection is required, 0 if it is not, < 0 on error
  */
-int cfg80211_chandef_dfs_required(struct wiphy *wiphy,
-				  const struct cfg80211_chan_def *chandef,
-				  enum nl80211_iftype);
+int cfg80211_chandef_dfs_check(struct wiphy *wiphy,
+			       const struct cfg80211_chan_def *chandef,
+			       enum nl80211_iftype);
 
 /**
  * ieee80211_chandef_rate_flags - returns rate flags for a channel
@@ -1631,7 +1631,7 @@ struct cfg80211_assoc_request {
  * @ie_len: Length of ie buffer in octets
  * @reason_code: The reason code for the deauthentication
  * @local_state_change: if set, change local state only and
- *	do not set a deauth frame
+ *	do not send a deauth frame
  */
 struct cfg80211_deauth_request {
 	const u8 *bssid;

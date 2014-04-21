@@ -5803,8 +5803,8 @@ static int nl80211_start_radar_detection(struct sk_buff *skb,
 	if (wdev->cac_started)
 		return -EBUSY;
 
-	err = cfg80211_chandef_dfs_required(wdev->wiphy, &chandef,
-					    NL80211_IFTYPE_UNSPECIFIED);
+	err = cfg80211_chandef_dfs_check(wdev->wiphy, &chandef,
+					 NL80211_IFTYPE_UNSPECIFIED);
 	if (err < 0)
 		return err;
 
@@ -5934,9 +5934,9 @@ skip_beacons:
 				     wdev->iftype))
 		return -EINVAL;
 
-	err = cfg80211_chandef_dfs_required(wdev->wiphy,
-					    &params.chandef,
-					    wdev->iftype);
+	err = cfg80211_chandef_dfs_check(wdev->wiphy,
+					 &params.chandef,
+					 wdev->iftype);
 	if (err < 0)
 		return err;
 
